@@ -1,0 +1,30 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+    - name: Deploy to VM
+      env:
+        DOMAIN: ${{ secrets.DOMAIN }}
+        VANITY_HOSTS: ${{ secrets.VANITY_HOSTS }}
+        CM_USERS: ${{ vars.CM_USER }}
+        VM_IP: ${{ vars.VM_IP }}
+      run: |
+        scp -r ./* $CM_USER@$VM_IP:/path/to/deployment/directory/
+        ssh ${{ vars.CM_USER }}@us-southeast-00.cms.pc3.co << EOF
+          cd /www/$DOMAIN
+          python3 scripts/setup_wordpress.py $DOMAIN --vanity $VANITY_HOSTS
+        EOF

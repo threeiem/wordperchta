@@ -31,8 +31,7 @@ class Domain:
     def configure_nginx(self, system):
         server_names = f"{self.name} www.{self.name} " + " ".join(f"{host}.{self.name}" for host in self.vanity_hosts)
         nginx_conf = f"/etc/nginx/conf.d/{self.name}.conf"
-        with open(nginx_conf, 'w') as f:
-            f.write(f"""
+        config_content = f"""
 server {{
     listen 80;
     server_name {server_names};
@@ -44,12 +43,14 @@ server {{
     }}
 
     location ~ \\.php$ {{
-        fastcgi_pass unix:/var/run/php-fpm7.sock;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
         fastcgi_index index.php;
         include fastcgi.conf;
     }}
 }}
-""")
+"""
+        system.run_command(f"echo '{config_content}' > {nginx_conf}")
+        system.run_command("nginx -t && rc-service nginx reload")
 
     def setup_ssl(self, system):
         ssl_domains = f"-d {self.name} -d www.{self.name} " + " ".join(f"-d {host}.{self.name}" for host in self.vanity_hosts)
